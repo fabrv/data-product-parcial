@@ -23,6 +23,7 @@ COPY 'data/academatica_videos.csv' /parcial
 COPY 'data/academatica_videos_metadatas.csv' /parcial
 
 # Correr data.sql que carga los datos a la base de datos
+# Este archivo lo generamos con MySQL Workbench
 ADD data.sql /docker-entrypoint-initdb.d
 ```
 
