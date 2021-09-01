@@ -1,4 +1,6 @@
 # Parcial 1
+- Fabrizzio Rivera Delcompare, 20170051
+- Daniela Sofia Dominguez Novotny, 20180365
 ## Crear docker file de MySQL
 ```Dockerfile
 # Traer la imagen de MySQL
