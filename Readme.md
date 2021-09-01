@@ -13,7 +13,7 @@
 install.packages("RMySQL")
 install.packages("flexdashboard")
 ```
-hola
+
 2. Crear un nuevo archivo R Markdown con el siguiente contenido:
 ```r
 ---
