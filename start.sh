@@ -11,5 +11,5 @@ docker network create --driver bridge parcial_network
 echo "starting"
 docker run -it --network parcial_network -p 3306:3306 -d my-db --secure-file-priv=/parcial1
 docker pull obedaeg/rstudio-mysql
-docker run -it --network parcial_network -e PASSWORD=test123 -p 8787:8787 -d obedaeg/rstudio-mysql
+docker run -it --network parcial_network -e PASSWORD=password -p 8787:8787 -d obedaeg/rstudio-mysql
 docker run -it -p 3307:3306 -d my-db --secure-file-priv=/parcial1

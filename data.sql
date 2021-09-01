@@ -1,4 +1,4 @@
-USE parcial1;
+USE parcial;
 
 CREATE TABLE videos (
   kind VARCHAR(100),
@@ -23,19 +23,19 @@ CREATE TABLE videos_meta (
   link VARCHAR(1000)
 );
 
-LOAD DATA INFILE '/parcial1/academatica_videos.csv'
+LOAD DATA INFILE '/parcial/academatica_videos.csv'
 INTO TABLE videos
 FIELDS TERMINATED BY ','
 LINES TERMINATED BY '\n'
 IGNORE 1 ROWS;
 
-LOAD DATA INFILE '/parcial1/academatica_video_stats.csv'
+LOAD DATA INFILE '/parcial/academatica_video_stats.csv'
 INTO TABLE video_stats
 FIELDS TERMINATED BY ','
 LINES TERMINATED BY '\n'
 IGNORE 1 ROWS;
 
-LOAD DATA INFILE '/parcial1/academatica_videos_metadatas.csv'
+LOAD DATA INFILE '/parcial/academatica_videos_metadatas.csv'
 INTO TABLE videos_meta
 FIELDS TERMINATED BY '\,'
 OPTIONALLY ENCLOSED BY '"'
