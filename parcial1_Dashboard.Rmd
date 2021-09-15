@@ -1,0 +1,499 @@
+---
+title: "Parcial 1"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: scroll
+    cache: TRUE
+---
+
+
+```{r setup, include=FALSE}
+install.packages("flexdashboard")
+install.packages("dplyr")
+install.packages("ggplot2")
+install.packages("lubridate")
+install.packages("plyr")
+install.packages("crosstalk")
+install.packages("DT")
+
+library(flexdashboard)
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(RMySQL)
+library(plyr)
+library(crosstalk)
+library(DT)
+```
+
+```{r bases_de_datos}
+db_user <- 'root'
+db_password <- 'root123'
+db_name <- 'test'
+db_table <- 'videos'
+db_host <- '172.20.0.3' # for local access
+db_port <- 3306
+
+# 3. Read data from db
+mydb <-  dbConnect(RMySQL::MySQL(), user = db_user, password = db_password,
+                   dbname = db_name, host = db_host, port = db_port)
+s <- paste0("select * from ", db_table)
+rs <- dbSendQuery(mydb, s)
+videos <-  fetch(rs, n = -1)
+on.exit(dbDisconnect(mydb))
+
+# Videos metadata
+db_tableM <- 'metadata2'
+
+mydbM <-  dbConnect(RMySQL::MySQL(), user = db_user, password = db_password,
+                   dbname = db_name, host = db_host, port = db_port)
+sM <- paste0("select * from ", db_tableM)
+rsM <- dbSendQuery(mydbM, sM)
+metadata <-  fetch(rsM, n = -1)
+on.exit(dbDisconnect(mydbM))
+
+# Videos Stats
+db_tableS <- 'Video_stats'
+
+mydbS <-  dbConnect(RMySQL::MySQL(), user = db_user, password = db_password,
+                    dbname = db_name, host = db_host, port = db_port)
+sS <- paste0("select * from ", db_tableS)
+rsS <- dbSendQuery(mydbS, sS)
+stats <-  fetch(rsS, n = -1)
+on.exit(dbDisconnect(mydbS))
+
+```
+
+```{r cleaning}
+
+names(videos)[3] <- 'platform_id'
+names(videos)[4] <- 'video_id'
+names(videos)[5] <- 'video_publish_at'
+
+names(stats)[1] <- 'video_id'
+names(stats)[2] <- 'view_count'
+names(stats)[3] <- 'like_count'
+names(stats)[4] <- 'dislike_count'
+names(stats)[5] <- 'favorite_count'
+names(stats)[6] <- 'comment_count'
+
+```
+
+```{r kpis}
+metricas <- stats %>% 
+  summarise(total_view = sum(view_count),
+            total_likes = sum(like_count),
+            total_dislikes = sum(dislike_count),
+            total_favorite = sum(favorite_count),
+            total_comments = sum(comment_count))
+```
+
+
+Comentarios {data-icon="fa-commenting"} 
+=======================
+
+Cada video tiene el espacio para que los seguidores puedan comentar sus ideas y opiniones. A continuación se muestra un pequeño estudio del comportamiento de estos. Para ver cad una de las gráficas simplemente presione un _click_ sobre los respectivos _tabs_.
+
+
+
+
+Fila 1 {.tabset .tabset-fade}
+-------------------------------------
+
+### Comentarios por video
+
+```{r CommtXvideo}
+# range(stats$comment_count)
+breaks <- seq(0,280,by = 20)
+comm <- table(cut(stats$comment_count,breaks,right = TRUE))
+
+barplot(comm, main = "Número de videos por cantidad de comentarios", xlab = "Cantidad de comentarios", ylab = "Cantidad de videos", col = "#69b3a2", border = "dark grey")
+```
+
+> La mayoria de videos tiene pocos comentarios. Para poder apreciar y entender mejor la poca cantidad de comentarios, en la siguiente gráfica se muestran únicamente los videos que tengan entre 0 y 20 commentarios.
+
+### Detalle commentarios
+
+```{r CommtXvideo-Detalle}
+comm22 <- count(stats$comment_count)
+comm22$x <- as.integer(comm22$x)
+comm221 <- comm22[1:20,]
+
+barplot(height = comm221$freq, 
+        names.arg = comm221$x,
+        col = "#69b3a2",  border = "dark grey",
+        ylab = "cantidad de videos por comentarios",
+        xlab = "numero de comentarios",
+        main = "Detalle de videos por cantidad de commentarios")
+title(sub = "(de 0 a 20 comentarios por video)",
+      line = -16,
+      cex = 1)
+```
+
+> Detalle del comportamiento de la cantidad de comentarios por video.
+Muchos de los videos tienen muy pocos comentarios. Lo más usual es que tengan 0 comentarios. 
+
+### Datos sin agrupar
+
+```{r}
+barplot(height = comm22$freq,
+        names.arg = comm22$x,
+        col = "#69b3a2",
+        ylab = "cantidad de videos por comentarios",
+        xlab = "numero de comentarios",
+        main = "Datos sin agrupar")
+```
+
+
+
+Fila 2
+-----------------------------------------------------------------------
+
+### Total de videos
+
+```{r valuebox totalViews}
+valueBox(formattable::comma(length(stats$video_id), digits = 0),
+         icon = 'fa-youtube',
+         color = 'teal')
+```
+
+### Total de comentarios en los 859 videos
+
+```{r valuebox comentario}
+valueBox(formattable::comma(metricas$total_comments, digits = 0),
+         icon = 'fa-comment-dots',
+         color = 'teal')
+```
+
+
+### Mayor cantidad de comentarios en un video
+
+```{r valuebox maxComentario}
+max = comm22[length(comm22$x),1]
+valueBox(max,
+         icon = 'fa-arrow-alt-circle-up',
+         color = 'teal')
+```
+
+Fila 3
+-----------------------------------------------------------------------
+
+### Promedio de comentarios por video
+
+```{r}
+Cpromedio <- round(mean(stats$comment_count),2)
+gauge(Cpromedio,
+      min = 0,
+      max = 100,
+      symbol = '%',
+      abbreviateDecimals = 1)
+```
+
+
+### Videos con 0 comentarios
+
+```{r}
+comment_rate <- comm221[1,2]
+gauge(comment_rate, 
+      min = 0, 
+      max = 859,
+      symbol = ' videos',
+      label = 'videos con 0 likes')
+```
+
+
+Fila 4
+-------------------------------------
+
+### Tabla
+
+Esta tabla muestra el numero de videos que hay por cantidad de comentarios. 
+
+
+### Tabla de numero de videos por cantidad de comentarios
+
+```{r TablaComentarios}
+DT:: datatable(comm22, options = list(pageLength = 5))
+```
+
+
+
+Likes {data-icon="fa-heart"}
+=======================
+
+Los usuarios tienen la opción de hacerle notar a cada uno de los creadores de videos si su contenido les gusta, por medio de darles un _like_. A continuación se presenta un breve estudio del comportamiento de estos likes a travez de todos los videos de academatica.
+
+Fila 1 {.tabset .tabset-fade}
+-------------------------------------
+
+### Resumen likes por videos
+
+```{r}
+breaks2 <- seq(0,3500,by = 250)
+likes <- table(cut(stats$like_count,breaks2,right = TRUE))
+
+barplot(likes, main = "Número de videos por cantidad de likes", xlab = "Cantidad de likes", ylab = "Cantidad de videos", col = "#E40589", border = "pink")
+```
+
+> Podemos ver que hay muchos videos que tienen entre 0 y 250 observaciones. En el siguiente tab veremos con mayor detalle el comportamiento de estos likes. 
+
+### Detalle de likes por videos
+
+```{r}
+like1 <- count(stats$like_count)
+like1$x <- as.integer(like1$x)
+like111 <- like1[1:250,]
+
+barplot(height = like111$freq, 
+        names.arg = like111$x,
+        col = "#E40589",  border = "#C40877",
+        ylab = "cantidad de videos por likes",
+        xlab = "numero de likes",
+        main = "Detalle de videos por cantidad de likes")
+#barplot(height = like1$freq,
+#        names.arg = like1$x,
+#        col = "#EF9C3F",
+#        ylab = "cantidad de videos por likes",
+#        xlab = "numero de likes",
+#        main = "Datos sin agrupar")
+```
+
+
+Fila 2 
+-------------------------------------
+
+### Mayor cantidad de likes en un video
+
+```{r valuebox maxLike}
+max_like = max(stats$like_count)
+valueBox(max_like,
+         icon = 'fas fa-thumbs-up',
+         color = '#E40589')
+```
+
+### Menor cantidad de likes en un video
+
+```{r valuebox minLike}
+min_like = min(stats$like_count)
+valueBox(min_like,
+         icon = 'far fa-thumbs-up',
+         color = '#E40589')
+```
+
+
+Fila 3 
+-------------------------------------
+
+### Porcentaje de likes de videos
+
+```{r}
+like_rate <- metricas$total_likes/(metricas$total_likes + metricas$total_dislikes)
+like_rate <- round(like_rate*100,0)
+gauge(like_rate, 
+      min = 0, 
+      max = 100,
+      symbol = '%',
+      label = '% de likes',
+      gaugeSectors(danger = c(0,100)))
+```
+
+### Porcentaje de dislikes de videos
+
+```{r}
+dislike_rate <- metricas$total_dislikes/(metricas$total_likes + metricas$total_dislikes)
+dislike_rate <- round(dislike_rate*100,0)
+gauge(dislike_rate, 
+      min = 0, 
+      max = 100,
+      symbol = '%',
+      label = '% de dislikes',
+      gaugeSectors(danger = c(0,100)))
+```
+
+Fila 4 
+-------------------------------------
+
+### Total de likes en los 859 videos
+
+```{r valuebox TotalLikes}
+valueBox(formattable::comma(metricas$total_likes, digits = 0),
+         icon = 'far fa-heart',
+         color = '#E40589')
+```
+
+
+### Mayor cantidad de comentarios en un video
+
+```{r valuebox maxLikes}
+max = like1[length(like1$x),1]
+valueBox(max,
+         icon = 'fa-arrow-alt-circle-up',
+         color = '#E40589')
+```
+
+Dislikes {data-icon="fa-frown"}
+=======================
+
+Cuando un video o contenido en específico no le agrada a un usuario o no lo entendió ni lo ayudó de ninguna manera, los usuarios pueden expresarse por medio de un _dislike_. En esta pestaña se detalla brevemente el comportamiento de estos dislikes en los videos de academatica.
+
+Fila 1 {.tabset .tabset-fade}
+-------------------------------------
+
+### Resumen dislikes por videos
+
+```{r}
+breaks3 <- seq(0,250,by = 10)
+dislikes <- table(cut(stats$dislike_count,breaks3,right = TRUE))
+
+barplot(dislikes, main = "Número de videos por cantidad de dislikes", xlab = "Cantidad de dislikes", ylab = "Cantidad de videos", col = "#EF9C3F", border = "orange")
+```
+
+> La mayoria de videos no tienen dislikes, lo que quiere decir que a los viewers no les desagrada el contenido de los videos. En el siguiente tab veremos con mayor detalle el comportamiento de estos dislikes. 
+
+### Detalle de dislikes por videos
+
+```{r}
+dislike1 <- count(stats$dislike_count)
+dislike1$x <- as.integer(dislike1$x)
+dislike111 <- dislike1[1:40,]
+
+barplot(height = dislike111$freq, 
+        names.arg = dislike111$x,
+        col = "#EF9C3F",  border = "orange",
+        ylab = "cantidad de videos por likes",
+        xlab = "numero de likes",
+        main = "Detalle de videos por cantidad de likes")
+```
+
+
+Fila 2 
+-------------------------------------
+
+### Mayor cantidad de dislikes en un video
+
+```{r valuebox maxDislike}
+max_dislike = max(stats$dislike_count)
+valueBox(max_dislike,
+         icon = 'fas fa-thumbs-down',
+         color = 'orange')
+```
+
+### Menor cantidad de dislikes en un video
+
+```{r valuebox minDislike}
+min_dislike = min(stats$dislike_count)
+valueBox(min_dislike,
+         icon = 'far fa-thumbs-down',
+         color = 'orange')
+```
+
+
+Fila 3 
+-------------------------------------
+
+### Porcentaje de Likes de videos
+
+```{r}
+like_rate <- metricas$total_likes/(metricas$total_likes + metricas$total_dislikes)
+like_rate <- round(like_rate*100,0)
+gauge(like_rate, 
+      min = 0, 
+      max = 100,
+      symbol = '%',
+      label = '% de likes',
+      gaugeSectors(warning = c(0,100)))
+```
+
+### Porcentaje de dislikes de videos
+
+```{r}
+dislike_rate <- metricas$total_dislikes/(metricas$total_likes + metricas$total_dislikes)
+dislike_rate <- round(dislike_rate*100,0)
+gauge(dislike_rate, 
+      min = 0, 
+      max = 100,
+      symbol = '%',
+      label = '% de dislikes',
+      gaugeSectors(warning = c(0,100)))
+```
+
+Fila 4 
+-------------------------------------
+
+### Total de dislikes en los 859 videos
+
+```{r valuebox TotalDisikes}
+valueBox(formattable::comma(metricas$total_dislikes, digits = 0),
+         icon = 'far fa-heart-broken',
+         color = 'orange')
+```
+
+
+### Mayor cantidad de dislikes en un video
+
+```{r valuebox maxDislikes}
+max = dislike1[length(dislike1$x),1]
+valueBox(max,
+         icon = 'fa-arrow-alt-circle-up',
+         color = 'orange')
+```
+
+Resumen {data-icon="fa-database"}
+======================
+
+
+##
+
+### Reproducciones
+
+
+```{r valuebox reproducciones}
+valueBox(formattable::comma(metricas$total_view, digits = 0),
+         icon = 'fa-eye',
+         color = 'blue')
+```
+
+##
+
+### Likes
+
+```{r valuebox likes}
+valueBox(formattable::comma(metricas$total_likes, digits = 0),
+         icon = 'fa-thumbs-up',
+         color = 'success')
+```
+
+##
+
+### Dislikes
+
+```{r valuebox dislikes}
+valueBox(formattable::comma(metricas$total_dislikes, digits = 0),
+         icon = 'fa-thumbs-down',
+         color = 'warning')
+```
+
+##
+
+### Comentarios
+
+```{r valuebox comentarios}
+valueBox(formattable::comma(metricas$total_comments, digits = 0),
+         icon = 'fa-comment',
+         color = 'danger')
+```
+
+##
+
+### Total de videos
+
+```{r valuebox ViewsTotal}
+valueBox(formattable::comma(length(stats$video_id), digits = 0),
+         icon = 'fa-youtube',
+         color = 'purple')
+```
+
+
+
+
