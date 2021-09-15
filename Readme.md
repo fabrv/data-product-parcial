@@ -56,32 +56,6 @@ docker network inspect my_network
 3. Ingresar las credenciales `rstudio` y `password`
 
 ## Codigo de R
-1. Instalar dependencias
-```r
-install.packages("RMySQL")
-```
-
-2. Crear un nuevo archivo R Markdown con el siguiente contenido:
-```r
-library(RMySQL)
-
-db_user <- 'user'
-db_password <- 'test123'
-db_name <- 'parcial1'
-db_host <- '172.20.0.2' # usar el puerto obtenido del comando `docker network inspect my_network`
-db_port <- 3306
-
-## Conexión
-mydb <-  dbConnect(RMySQL::MySQL(), user = db_user, password = db_password,
-                   dbname = db_name, host = db_host, port = db_port)
-
-## Videos
-db_table <- 'videos'
-
-s <- paste0("select * from ", db_table)
-rs <- dbSendQuery(mydb, s)
-videos <-  fetch(rs, n = -1)
-on.exit(dbDisconnect(mydb))
-```
+Agrear el archivo `parcial1_Dashboard.Rmd` a RStudio, ejecutar todos los bloques y después presionar el botón `Knit`
 
 Y listo!
